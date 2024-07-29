@@ -1,4 +1,4 @@
-import com.sun.tools.javac.Main;
+package main;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -35,7 +35,7 @@ public class Server {
                 connection.send(nameRequest);
                 Message response = connection.receive();
                 if (response.getType() != MessageType.USER_NAME)
-                    ConsoleHelper.writeMessage("Message received from " + socket.getRemoteSocketAddress() +
+                    ConsoleHelper.writeMessage("main.Message received from " + socket.getRemoteSocketAddress() +
                             ". The message type does not match the protocol.");
                 if (response.getData().isEmpty())
                     ConsoleHelper.writeMessage("There was an attempt to connect to the server using an empty name from  " +
@@ -74,7 +74,7 @@ public class Server {
         ConsoleHelper.writeMessage("Enter the server port number: ");
         int port = ConsoleHelper.readInt();
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            ConsoleHelper.writeMessage("Server is working on port: " + port);
+            ConsoleHelper.writeMessage("main.Server is working on port: " + port);
             while (true) {
                 Socket client = serverSocket.accept();
                 Handler handler = new Handler(client);
