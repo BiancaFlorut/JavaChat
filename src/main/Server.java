@@ -19,17 +19,17 @@ public class Server {
             ConsoleHelper.writeMessage("A new connection with " + socket.getRemoteSocketAddress() +
                     " has been established");
             try (Connection connection = new Connection(socket)){
-                String clientName = serverHandshake(connection);
+                MessageData clientName = serverHandshake(connection);
                 sendBroadcastMessage(new Message(MessageType.USER_ADDED, clientName));
-                notifyUsers(connection, clientName);
-                serverMainLoop(connection, clientName);
+                notifyUsers(connection, clientName.getUserName());
+                serverMainLoop(connection, clientName.getUserName());
             } catch (Exception e) {
                 ConsoleHelper.writeMessage("Error communicating with " + socket.getRemoteSocketAddress());
             }
 
         }
 
-        private String serverHandshake(Connection connection) throws IOException, ClassNotFoundException {
+        private MessageData serverHandshake(Connection connection) throws IOException, ClassNotFoundException {
             while (true) {
                 Message nameRequest = new Message(MessageType.NAME_REQUEST);
                 connection.send(nameRequest);
@@ -37,24 +37,24 @@ public class Server {
                 if (response.getType() != MessageType.USER_NAME)
                     ConsoleHelper.writeMessage("main.Message received from " + socket.getRemoteSocketAddress() +
                             ". The message type does not match the protocol.");
-                if (response.getData().isEmpty())
+                if (response.getData() == null)
                     ConsoleHelper.writeMessage("There was an attempt to connect to the server using an empty name from  " +
                             socket.getRemoteSocketAddress());
-                if (connectionMap.containsKey(response.getData()))
+                if (connectionMap.containsKey(response.getData().getUserName()))
                     ConsoleHelper.writeMessage("There was an attempt to connect to the server using a name that is already being used from: " +
                             socket.getRemoteSocketAddress());
 
-                connectionMap.put(response.getData(), connection);
+                connectionMap.put(response.getData().getUserName(), connection);
                 Message success = new Message(MessageType.NAME_ACCEPTED);
                 connection.send(success);
-                return  response.getData();
+                return response.getData();
 
             }
         }
 
         private void notifyUsers(Connection connection, String userName) throws IOException{
             for (Map.Entry<String, Connection> entry: connectionMap.entrySet()) {
-                Message newUser = new Message(MessageType.USER_ADDED, entry.getKey());
+                Message newUser = new Message(MessageType.USER_ADDED, new MessageData(entry.getKey()));
                 if (!entry.getKey().equals(userName)) connection.send(newUser);
             }
         }
@@ -63,7 +63,7 @@ public class Server {
             while (true) {
                 Message clientMessage = connection.receive();
                 if (clientMessage.getType() == MessageType.TEXT) {
-                    Message message = new Message(MessageType.TEXT, userName + ": " + clientMessage.getData());
+                    Message message = new Message(MessageType.TEXT, new MessageData(userName, clientMessage.getData().getText()));
                     sendBroadcastMessage(message);
                 } else ConsoleHelper.writeMessage("The send message is not a text message.");
             }

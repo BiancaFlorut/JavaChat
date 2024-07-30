@@ -26,8 +26,10 @@ public class Connection implements Closeable {
 
     public Message receive() throws IOException, ClassNotFoundException {
         synchronized (in) {
-            return (Message) in.readObject();
+            Message message = (Message) in.readObject();
+            return message;
         }
+
     }
 
     public SocketAddress getRemoteSocketAddress() {

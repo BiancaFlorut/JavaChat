@@ -1,9 +1,6 @@
 package client;
 
-import main.Connection;
-import main.ConsoleHelper;
-import main.Message;
-import main.MessageType;
+import main.*;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -19,21 +16,21 @@ public class Client {
                 clientHandshake();
                 clientMainLoop();
             } catch (IOException e) {
-                ConsoleHelper.writeMessage("An error occurred while opening the socket connection.");
+                ConsoleHelper.writeMessage("An error occurred while opening the socket connection." + e.getMessage());
+                e.printStackTrace();
                 notifyConnectionStatusChanged(false);
             } catch (ClassNotFoundException e) {
                 ConsoleHelper.writeMessage("An error occurred in the client connection protocol.");
                 notifyConnectionStatusChanged(false);
             }
-
         }
 
-        protected void processIncomingMessage(String message) {
-            ConsoleHelper.writeMessage(message);
+        protected void processIncomingMessage(MessageData message) {
+            ConsoleHelper.writeMessage(message.toString());
         }
 
         protected void informAboutAddingNewUse(String userName) {
-            ConsoleHelper.writeMessage(userName + "has joined the chat.");
+            ConsoleHelper.writeMessage(userName + " has joined the chat.");
         }
 
         protected void informAboutDeletingNewUser(String userName) {
@@ -50,13 +47,13 @@ public class Client {
         protected void clientHandshake() throws IOException, ClassNotFoundException {
             while (true) {
                 Message message = connection.receive();
-                if (message.getType() == MessageType.NAME_REQUEST) {
-                    String userName = getUserName();
-                    connection.send(new Message(MessageType.USER_NAME, userName));
-                } else
-                if (message.getType() == MessageType.NAME_ACCEPTED) {
-                    notifyConnectionStatusChanged(true);
-                    break;
+                if( message != null )
+                    if (message.getType() == MessageType.NAME_REQUEST) {
+                        String userName = getUserName();
+                        connection.send(new Message(MessageType.USER_NAME, new MessageData(userName)));
+                    } else if (message.getType() == MessageType.NAME_ACCEPTED) {
+                        notifyConnectionStatusChanged(true);
+                        break;
                 } else {
                     throw new IOException("Unexpected MessageType");
                 }
@@ -69,15 +66,17 @@ public class Client {
                 if (message.getType() == MessageType.TEXT) {
                     processIncomingMessage(message.getData());
                 } else if(message.getType() == MessageType.USER_ADDED) {
-                    informAboutAddingNewUse(message.getData());
+                    informAboutAddingNewUse(message.getData().getUserName());
                 } else if (message.getType() == MessageType.USER_REMOVED) {
-                    informAboutDeletingNewUser(message.getData());
+                    informAboutDeletingNewUser(message.getData().getUserName());
                 } else throw new IOException("Unexpected MessageType");
             }
         }
     }
+
     protected Connection connection;
     private volatile boolean clientConnected = false;
+    private String userName;
 
     protected String getServerAddress() {
         ConsoleHelper.writeMessage("Type the server address: ");
@@ -103,7 +102,7 @@ public class Client {
     }
 
     protected void sendTextMessage(String text) {
-        Message message = new Message(MessageType.TEXT, text);
+        Message message = new Message(MessageType.TEXT, new MessageData(userName, text));
         try {
             connection.send(message);
         } catch (IOException e) {
